@@ -1,0 +1,42 @@
+name: Build APK
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'Config repo, e.g. ali/configs'
+        required: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip
+        run: unzip nexus.zip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Prepare
+        working-directory: nexus
+        env:
+          REPO: ${{ inputs.repo }}
+        run: |
+          sed -i "s|USER/REPO|$REPO|g" lib/settings.dart
+          flutter create --platforms=android --project-name nexus --org com.nexus .
+          rm -rf test
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <application android:extractNativeLibs="true"|' $M
+          sed -i 's|android:label="[^"]*"|android:label="Nexus"|' $M
+      - name: Build
+        working-directory: nexus
+        run: |
+          flutter pub get
+          flutter build apk --release --no-shrink
+          flutter build apk --release --no-shrink --split-per-abi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexus-apk
+          path: nexus/build/app/outputs/flutter-apk/*.apk
