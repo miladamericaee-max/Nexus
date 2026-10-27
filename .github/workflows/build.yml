@@ -28,8 +28,11 @@ jobs:
           flutter create --platforms=android --project-name nexus --org com.nexus .
           rm -rf test
           M=android/app/src/main/AndroidManifest.xml
-          sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <application android:extractNativeLibs="true"|' $M
+          sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <application|' $M
           sed -i 's|android:label="[^"]*"|android:label="Nexus"|' $M
+          F=$(ls android/app/build.gradle.kts android/app/build.gradle 2>/dev/null | head -1)
+          sed -i '0,/^android {/s//android {\n    packaging { jniLibs { useLegacyPackaging = true } }/' $F
+          grep -n useLegacyPackaging $F
       - name: Build
         working-directory: nexus
         run: |
